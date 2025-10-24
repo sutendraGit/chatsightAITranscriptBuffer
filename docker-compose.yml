@@ -1,0 +1,45 @@
+services:
+
+  redis:
+    image: redis:latest
+    container_name: movie-book-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - live-chat-network
+    healthcheck:
+        test: [ "CMD", "redis-cli", "ping" ]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+    volumes:
+      - redis_data:/data
+
+  live-chat-buffer-service:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: live_chat_buffer_service:latest
+    container_name: live-chat-buffer-service
+    command: >
+      /bin/bash -c "
+        sleep 5;
+        /app/scripts/app-entrypoint.sh;
+      "
+    environment:
+      REDIS_HOST: my-redis
+      REDIS_PORT: 6379
+    ports:
+      - "0.0.0.0:8062:8062"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - live-chat-network
+
+volumes:
+  redis_data:
+
+networks:
+  live-chat-network:
+    driver: bridge
